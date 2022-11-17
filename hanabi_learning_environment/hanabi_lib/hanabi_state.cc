@@ -190,26 +190,14 @@ bool HanabiState::MoveIsLegal(HanabiMove move) const {
       if (!HintingIsLegal(move)) {
         return false;
       }
-      const auto& cards = HandByOffset(move.TargetOffset()).Cards();
-      if (!std::any_of(cards.begin(), cards.end(),
-                       [move](const HanabiCard& card) {
-                         return card.Color() == move.Color();
-                       })) {
-        return false;
-      }
+	  // we explicitly allow hinting an absent color
       break;
     }
     case HanabiMove::kRevealRank: {
       if (!HintingIsLegal(move)) {
         return false;
       }
-      const auto& cards = HandByOffset(move.TargetOffset()).Cards();
-      if (!std::any_of(cards.begin(), cards.end(),
-                       [move](const HanabiCard& card) {
-                         return card.Rank() == move.Rank();
-                       })) {
-        return false;
-      }
+	  // we explicitly allow hinting an absent rank
       break;
     }
     default:

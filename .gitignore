@@ -1,4 +1,11 @@
 *.pyc
 _skbuild/
 hanabi_learning_environment.egg-info/
+CMakeCache.txt
+CMakeFiles/*
+CMakePresets.json
+Makefile
+cmake_install.cmake
+game_example
+hanabi_lib/
 

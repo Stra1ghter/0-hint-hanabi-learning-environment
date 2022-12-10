@@ -31,7 +31,7 @@ struct GameResult {
 
 constexpr const char* kGameParamArgPrefix = "--config.hanabi.";
 
-GameResult SimulateGame(const hanabi_learning_env::HanabiGame& game,
+GameResult SimulateGame(hanabi_learning_env::HanabiGame& game,
                         bool verbose, std::mt19937* rng) {
   hanabi_learning_env::HanabiState state(&game);
   GameResult result = {0, 0, 0};

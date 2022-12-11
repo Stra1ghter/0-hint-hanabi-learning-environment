@@ -291,6 +291,8 @@ class HanabiMoveType(enum.IntEnum):
   REVEAL_COLOR = 3
   REVEAL_RANK = 4
   DEAL = 5
+  RETURN = 6
+  DEAL_SPECIFIC = 7
 
 
 class HanabiMove(object):
@@ -327,6 +329,12 @@ class HanabiMove(object):
     return lib.MoveRank(self._move)
 
   @staticmethod
+  def get_deal_specific_move(card_index, player, color, rank):
+    c_move = ffi.new("pyhanabi_move_t*")
+    assert lib.GetDealSpecificMove(card_index, player, color, rank, c_move)
+    return HanabiMove(c_move)
+
+  @staticmethod
   def get_discard_move(card_index):
     c_move = ffi.new("pyhanabi_move_t*")
     assert lib.GetDiscardMove(card_index, c_move)
@@ -337,6 +345,13 @@ class HanabiMove(object):
     c_move = ffi.new("pyhanabi_move_t*")
     assert lib.GetPlayMove(card_index, c_move)
     return HanabiMove(c_move)
+
+  @staticmethod
+  def get_return_move(card_index, player):
+    c_move = ffi.new("pyhanabi_move_t*")
+    assert lib.GetReturnMove(card_index, player, c_move)
+    return HanabiMove(c_move)
+
 
   @staticmethod
   def get_reveal_color_move(target_offset, color):
@@ -390,6 +405,11 @@ class HanabiMove(object):
     elif move_type == HanabiMoveType.DEAL:
       move_dict["color"] = color_idx_to_char(self.color())
       move_dict["rank"] = self.rank()
+    elif move_type == HanabiMoveType.DEAL_SPECIFIC:
+      move_dict["color"] = color_idx_to_char(self.color())
+      move_dict["rank"] = self.rank()
+    elif move_type == HanabiMoveType.RETURN:
+      move_dict["card_index"] = self.card_index()
     else:
       raise ValueError("Unsupported move: {}".format(self))
 
@@ -568,6 +588,34 @@ class HanabiState(object):
   def deal_random_card(self):
     """If cur_player == CHANCE_PLAYER_ID, make a random card-deal move."""
     lib.StateDealRandomCard(self._state)
+
+  def deal_specific_card(self, player_id, color, rank, card_index):
+    """Deal a specific card to a player, you must return a card from the player's hand first!"""
+    assert self.cur_player() == CHANCE_PLAYER_ID
+    move = HanabiMove.get_deal_specific_move(card_index, player_id, color, rank)
+    self.apply_move(move)
+
+  def return_card(self, player_id, card_index):
+    """ Return the specific card from the hand of the player to the deck, but keep all prior (!) knowledge about it."""
+    hand_size = lib.StateGetHandSize(self._state, player_id)
+    assert card_index < hand_size && card_index >= 0
+    move = HanabiMove.get_return_move(card_index=card_index, player=player_id)
+    self.apply_move(move)
+
+  def set_hand(self, player_id, hand):
+    """Set the hand of the player with player_id to the given hand.
+
+    Args:
+      player_id: int id of the target player.
+      hand: list of dict with 'color' keys with char values and 'rank' keys and int values, indicating the hand to set
+    """
+    hand_size = lib.StateGetHandSize(self._state, player_id)
+    for _ in range(hand_size):
+      self.return_card(player_id, 0)
+    for card_index, card in enumerate(hand):
+      color = color_char_to_idx(card["color"])
+      rank = card["rank"]
+      self.deal_specific_card(player_id, color, rank, card_index)
 
   def player_hands(self):
     """Returns a list of all hands, with cards ordered oldest to newest."""
